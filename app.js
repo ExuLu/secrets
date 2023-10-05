@@ -4,7 +4,8 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import ejs from 'ejs';
 import mongoose from 'mongoose';
-import md5 from 'md5';
+import bcrypt from 'bcrypt';
+const saltRounds = 12;
 
 const app = express();
 const uri = process.env.MONGODB_SECRET_URI;
@@ -46,19 +47,20 @@ app.get('/logout', function (req, res) {
 
 app.post('/login', async function (req, res) {
   const username = req.body.username;
-  const password = md5(req.body.password);
+  const password = req.body.password;
   const foundUser = await User.findOne({
     email: username,
   });
-
   if (foundUser) {
-    if (foundUser.password === password) {
-      console.log(`You've successfully loged in`);
-      res.render('secrets');
-    } else {
-      console.log(`Wrong password!`);
-      res.redirect('/login');
-    }
+    await bcrypt.compare(password, foundUser.password, function (err, result) {
+      if (result) {
+        console.log(`You've successfully loged in`);
+        res.render('secrets');
+      } else {
+        console.log(`Wrong password!`);
+        res.redirect('/login');
+      }
+    });
   } else {
     console.log('You need to register your user first!');
     res.redirect('/login');
@@ -67,28 +69,29 @@ app.post('/login', async function (req, res) {
 
 app.post('/register', async function (req, res) {
   const username = req.body.username;
-  const password = md5(req.body.password);
-  const foundUser = await User.findOne({
-    email: username,
-  });
+  await bcrypt.hash(req.body.password, saltRounds, async (err, hash) => {
+    const foundUser = await User.findOne({
+      email: username,
+    });
 
-  if (!foundUser) {
-    if (!username || !password) {
-      console.log(`You don't have username or password`);
-      res.redirect('/register');
+    if (!foundUser) {
+      if (!username || !req.body.password) {
+        console.log(`You don't have username or password`);
+        res.redirect('/register');
+      } else {
+        const user = new User({
+          email: username,
+          password: hash,
+        });
+        await user.save();
+        console.log(`You've successfully registered`);
+        res.render('secrets');
+      }
     } else {
-      const user = new User({
-        email: username,
-        password: password,
-      });
-      await user.save();
-      console.log(`You've successfully registered`);
-      res.render('secrets');
+      console.log(`You've already registered`);
+      res.redirect('/');
     }
-  } else {
-    console.log(`You've already registered`);
-    res.redirect('/');
-  }
+  });
 });
 
 app.listen(3000, () => {
