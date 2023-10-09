@@ -10,6 +10,7 @@ import passportLocalMongoose from 'passport-local-mongoose';
 import GoogleStrategy from 'passport-google-oauth20';
 import findOrCreate from 'mongoose-findorcreate';
 import FacebookStrategy from 'passport-facebook';
+import MongoStore from 'connect-mongo';
 
 const app = express();
 const uri = process.env.MONGODB_SECRET_URI;
@@ -23,6 +24,10 @@ app.use(
     secret: 'Our little secret.',
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: uri,
+      dbName: 'sessionsDB',
+    }),
   })
 );
 
