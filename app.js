@@ -136,6 +136,13 @@ app.get('/secrets', async function (req, res) {
   }
 });
 
+app.get('/secrets%20', async function (req, res) {
+  const foundUsers = await User.find({ secret: { $ne: null } });
+  if (foundUsers) {
+    res.render('secrets', { usersWithSecrets: foundUsers });
+  }
+});
+
 app.post('/register', async function (req, res) {
   User.register(
     {
